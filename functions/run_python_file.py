@@ -1,5 +1,6 @@
 import os
 import subprocess
+from google.genai import types
 
 def run_python_file(working_directory, file_path, args=[]):
     abs_path = os.path.abspath(os.path.join(working_directory, file_path))
@@ -23,3 +24,24 @@ def run_python_file(working_directory, file_path, args=[]):
         return result_string
     except Exception as e:
         return f"Error: executing Python file: {e}"
+
+schema_run_python_file = types.FunctionDeclaration(
+    name="run_python_file",
+    description="Executes a python file, with optional argument declaration.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="The file path of the python file to be executed.",
+            ),
+            "args": types.Schema(
+                type=types.Type.ARRAY,
+                description="The arguments that will be passed to the executed file, given as a list of strings. If not provided, an empty list is passed instead.",
+                items=types.Schema(
+                    type=types.Type.STRING
+                ),
+            ),
+        },
+    ),
+)
