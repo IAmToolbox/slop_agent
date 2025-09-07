@@ -4,6 +4,11 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from functions.get_files_info import get_files_info
+from functions.get_file_content import get_file_content
+from functions.write_file import write_file
+from functions.run_python_file import run_python_file
+
 from functions.get_files_info import schema_get_files_info
 from functions.get_file_content import schema_get_file_content
 from functions.write_file import schema_write_file
@@ -39,6 +44,48 @@ available_functions = types.Tool(
     ]
 )
 
+def call_function(function_call_part, is_verbose=False):
+    if verbose:
+        is_verbose = True
+    
+    if is_verbose:
+        print(f"Calling function: {function_call_part.name}({function_call_part.args})")
+    else:
+        print(f" - Calling function: {function_call_part.name}")
+    
+    args = function_call_part.args
+    args.update({"working_directory": "calculator"})
+    
+    match function_call_part.name:
+        case "get_files_info":
+            results = get_files_info(**args)
+        case "get_file_content":
+            results = get_file_content(**args)
+        case "write_file":
+            results = write_file(**args)
+        case "run_python_file":
+            results = run_python_file(**args)
+        case _:
+            return types.Content(
+                role="tool",
+                parts=[
+                    types.Part.from_function_response(
+                        name=function_call_part.name,
+                        response={"error": f"Unknown function: {function_call_part.name}"},
+                    )
+                ],
+            )
+    
+    return types.Content(
+        role="tool",
+        parts=[
+            types.Part.from_function_response(
+                name=function_call_part.name,
+                response={"result": results}
+            )
+        ],
+    )
+
 def main():
     if len(sys.argv) == 1:
         raise Exception("prompt not provided")
@@ -51,7 +98,12 @@ def main():
 
     if content_response.function_calls:
         for function_call in content_response.function_calls:
-            print(f"Calling function: {function_call.name}({function_call.args})")
+            results = call_function(function_call)
+            if not results.parts[0].function_response.response:
+                raise RuntimeError("Response is somehow missing")
+            
+            if verbose:
+                print(f"-> {results.parts[0].function_response.response["result"]}")
     else:
         print(content_response.text)
 

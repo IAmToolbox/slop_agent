@@ -19,7 +19,7 @@ def run_python_file(working_directory, file_path, args=[]):
         result_string = f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
         if result.returncode != 0:
             result_string += f"\nProcess exited with code {result.returncode}"
-        if len(result.stdout) == 0:
+        if len(result.stdout) == 0 and len(result.stderr) == 0:
             return "No output produced."
         return result_string
     except Exception as e:
