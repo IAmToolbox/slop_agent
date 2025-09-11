@@ -89,23 +89,30 @@ def call_function(function_call_part, is_verbose=False):
 def main():
     if len(sys.argv) == 1:
         raise Exception("prompt not provided")
-    content_response = client.models.generate_content(
-        model="gemini-2.0-flash-001",
-        contents=messages,
-        config=types.GenerateContentConfig(
-            tools=[available_functions], system_instruction=system_prompt),
-    )
-
-    if content_response.function_calls:
-        for function_call in content_response.function_calls:
-            results = call_function(function_call)
-            if not results.parts[0].function_response.response:
-                raise RuntimeError("Response is somehow missing")
+    for i in range(20):
+        try:
+            content_response = client.models.generate_content(
+                model="gemini-2.0-flash-001",
+                contents=messages,
+                config=types.GenerateContentConfig(
+                    tools=[available_functions], system_instruction=system_prompt),
+            )
+            for candidate in content_response.candidates:
+                messages.append(candidate.content)
             
-            if verbose:
-                print(f"-> {results.parts[0].function_response.response["result"]}")
-    else:
-        print(content_response.text)
+            if content_response.function_calls:
+                for function_call in content_response.function_calls:
+                    results = call_function(function_call)
+                    if not results.parts[0].function_response.response:
+                        raise RuntimeError("Response is somehow missing")
+                    messages.append(types.Content(role="user", parts=[types.Part(text=results.parts[0].function_response.response["result"])]))
+                    if verbose:
+                        print(f'-> {results.parts[0].function_response.response["result"]}')
+            else:
+                print(content_response.text)
+                break
+        except Exception:
+            break
 
     if verbose:
         print(f"User prompt: {user_prompt}")
